@@ -1,19 +1,48 @@
 #!/usr/bin/python3
-# Displays all cities of a given state from the
-# states table of the database hbtn_0e_4_usa.
-# Safe from SQL injections.
-# Usage: ./5-filter_cities.py <mysql username> \
-#                             <mysql password> \
-#                             <database name> \
-#                             <state name searched>
-import sys
-import MySQLdb
+"""
+Takes in the name of a state as an argument and
+lists all cities of that state, using
+the database hbtn_0e_4_usa
+"""
 
-if __name__ == "__main__":
-    db = MySQLdb.connect(user=sys.argv[1], passwd=sys.argv[2], db=sys.argv[3])
-    c = db.cursor()
-    c.execute("SELECT * FROM `cities` as `c` \
-                INNER JOIN `states` as `s` \
-                   ON `c`.`state_id` = `s`.`id` \
-                ORDER BY `c`.`id`")
-    print(", ".join([ct[2] for ct in c.fetchall() if ct[4] == sys.argv[4]]))
+if __name__ == '__main__':
+    from sys import argv
+    import MySQLdb as mysql
+    import re
+
+    if (len(argv) != 5):
+        print('Use: username, password, database name, state name')
+        exit(1)
+
+    state_name = ' '.join(argv[4].split())
+
+    if (re.search('^[a-zA-Z ]+$', state_name) is None):
+        print('Enter a valid name state (example: California)')
+        exit(1)
+
+    try:
+        db = mysql.connect(host='localhost', port=3306, user=argv[1],
+                           passwd=argv[2], db=argv[3])
+    except Exception:
+        print('Failed to connect to the database')
+        exit(0)
+
+    cursor = db.cursor()
+
+    cuantity = cursor.execute("""SELECT c.name FROM cities as c
+                      INNER JOIN states as s
+                      ON c.state_id = s.id
+                      WHERE s.name = '{:s}'
+                      ORDER BY c.id ASC;""".format(state_name))
+
+    result_query = cursor.fetchall()
+
+    final = []
+
+    for i in range(cuantity):
+        final.append(result_query[i][0])
+
+    print(', '.join(final))
+
+    cursor.close()
+    db.close()

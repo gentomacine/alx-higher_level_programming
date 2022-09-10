@@ -1,19 +1,48 @@
 #!/usr/bin/python3
-# Lists all State objects from the database hbtn_0e_6_usa.
-# Usage: ./7-model_state_fetch_all.py <mysql username> /
-#                                     <mysql password> /
-#                                     <database name>
-import sys
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from model_state import State
+"""
+Takes in the name of a state as an argument and
+lists all cities of that state, using
+the database hbtn_0e_4_usa
+"""
 
-if __name__ == "__main__":
-    engine = create_engine("mysql+mysqldb://{}:{}@localhost/{}"
-                           .format(sys.argv[1], sys.argv[2], sys.argv[3]),
-                           pool_pre_ping=True)
-    Session = sessionmaker(bind=engine)
-    session = Session()
+if __name__ == '__main__':
+    from sys import argv
+    import MySQLdb as mysql
+    import re
 
-    for state in session.query(State).order_by(State.id):
-        print("{}: {}".format(state.id, state.name))
+    if (len(argv) != 5):
+        print('Use: username, password, database name, state name')
+        exit(1)
+
+    state_name = ' '.join(argv[4].split())
+
+    if (re.search('^[a-zA-Z ]+$', state_name) is None):
+        print('Enter a valid name state (example: California)')
+        exit(1)
+
+    try:
+        db = mysql.connect(host='localhost', port=3306, user=argv[1],
+                           passwd=argv[2], db=argv[3])
+    except Exception:
+        print('Failed to connect to the database')
+        exit(0)
+
+    cursor = db.cursor()
+
+    cuantity = cursor.execute("""SELECT c.name FROM cities as c
+                      INNER JOIN states as s
+                      ON c.state_id = s.id
+                      WHERE s.name = '{:s}'
+                      ORDER BY c.id ASC;""".format(state_name))
+
+    result_query = cursor.fetchall()
+
+    final = []
+
+    for i in range(cuantity):
+        final.append(result_query[i][0])
+
+    print(', '.join(final))
+
+    cursor.close()
+    db.close()
